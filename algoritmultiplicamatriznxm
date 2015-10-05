@@ -6,11 +6,11 @@
 #include<time.h>
 #include<cuda.h>
 
-#define TILE_WIDTH 32
+#define TILE_WIDTH 4
 using namespace std;
 
 //=====================================================================================
-//Function to print matrices
+//FUNCION PARA IMPRIMIR LAS MATRICES
 void print(int *A, int n, int m)
 {
     for (int i=0; i<n; i++)
@@ -24,7 +24,7 @@ void print(int *A, int n, int m)
 }
 
 //=====================================================================================
-//Function used just to fill the given matrix with a given value
+//FUNCION PARA LLENAR MATRICES
 void fillMatrix (int *mat, int value, int n, int m)
 {
   int size=n*m;
@@ -36,8 +36,8 @@ void fillMatrix (int *mat, int value, int n, int m)
 }
 
 //=====================================================================================
-//Sequential
-//Function used to multiply both matrices taking each matrix as a vector
+//SECUENCIAL
+//Funcion multiplicacion de matrices ambas matrices como  vectores
 void multMatrixsequential (int *h_matA, int *h_matB, int *h_matC, int n, int m, int o)
 {
   //Row*Width+Col to find the value in the given bidimensional index
@@ -58,8 +58,8 @@ void multMatrixsequential (int *h_matA, int *h_matB, int *h_matC, int n, int m, 
 }
 
 //=====================================================================================
-//Parallel
-//The multiplication kernel without tiles
+//PARALELO
+//kernel para la multiplicacion de matrices sin uso de tiles
 __global__ void matrixMultKernel (int *d_matA, int *d_matB, int *d_matC, int n, int m, int o)
 {
   int Row = blockIdx.y*blockDim.y+threadIdx.y;
@@ -78,7 +78,7 @@ __global__ void matrixMultKernel (int *d_matA, int *d_matB, int *d_matC, int n, 
 }
 
 //=====================================================================================
-//the multiplication kernel with tiles
+//KERNEL MULTIPLICACION CON TILES
 __global__ void matrixMulKernelTiled(int *d_matA, int *d_matB, int *d_matC, int n, int m, int o){
     __shared__ int Mds[TILE_WIDTH][TILE_WIDTH];
     __shared__ int Nds[TILE_WIDTH][TILE_WIDTH];
@@ -128,11 +128,11 @@ __global__ void matrixMulKernelTiled(int *d_matA, int *d_matB, int *d_matC, int 
 
 
 //=====================================================================================
-//Function to call the kernel of the tiled multiplication
+//FUNCION KERNEL MULTIPLICACION PARALELA CON TILES
 void multMatrixParallelTiled(int *A, int *B, int *C, int n, int m, int o)
 {
 
-  float blockSize = 32.0;
+  float blockSize = 4;
 
   int *d_matA, *d_matB, *d_matC;
 
@@ -161,7 +161,7 @@ void multMatrixParallelTiled(int *A, int *B, int *C, int n, int m, int o)
 void multMatrixParallel(int *A, int *B, int *C, int n, int m, int o)
 {
 
-    float blockSize = 32.0;
+    float blockSize = 4;
 
     int *d_matA, *d_matB, *d_matC;
 
@@ -186,7 +186,7 @@ void multMatrixParallel(int *A, int *B, int *C, int n, int m, int o)
 
 
 //=====================================================================================
-//Function used to compare the results
+//FUNCION DE COMPARACION
 int compareMatrix (int *A, int *B,int n, int m)
 {
   int size=n*m;
@@ -194,24 +194,24 @@ int compareMatrix (int *A, int *B,int n, int m)
   {
     if (A[i]!=B[i])
     {
-      cout<<"## sequential and Parallel results are NOT equal ##"<<endl;
+      cout<<"## Resultados Sequecial y Paralelo matrices No son iguales ##"<<endl;
       return 0;
     }
   }
-  cout<<"== sequential and Parallel results are equal =="<<endl;
+  cout<<"== Resultados sequencial y Paralelo matrices son iguales =="<<endl;
   return 0;
 }
 
 
-//========================================== MAIN =====================================
+//============ PROGRAMA PRINCIPAL===========================
 
 int main()
 {
     clock_t start, finish;
     double elapsedsequential,elapsedParallel,elapsedParallelTiles,optimizationP,optimizationT;
-    int n=2;
+    int n=20;
     int m=4;
-    int o=8;
+    int o=40;
 
     int *matA = (int *) malloc(n * m * sizeof(int));
     int *matB = (int *) malloc(m * o * sizeof(int));
@@ -229,29 +229,29 @@ int main()
     multMatrixsequential(matA,matB,matCS,n,m,o);
     finish = clock();
     elapsedsequential = (((double) (finish - start)) / CLOCKS_PER_SEC );
-    cout<< "The sequential process took: " << elapsedsequential << " seconds to execute "<< endl<< endl;
+    cout<< "Proceso Secuencial: " << elapsedsequential << " seconds to execute "<< endl<< endl;
 
     start = clock();
     multMatrixParallel(matA,matB,matCP,n,m,o);
     finish = clock();
     elapsedParallel = (((double) (finish - start)) / CLOCKS_PER_SEC );
-    cout<< "The parallel process took: " << elapsedParallel << " seconds to execute "<< endl<< endl;
+    cout<< "Proceso paralelo sin Tiles " << elapsedParallel << " seconds to execute "<< endl<< endl;
 
     start = clock();
     multMatrixParallelTiled(matA,matB,matCPT,n,m,o);
     finish = clock();
     elapsedParallelTiles = (((double) (finish - start)) / CLOCKS_PER_SEC );
-    cout<< "The parallel using Tiles process took: " << elapsedParallelTiles << " seconds to execute "<< endl<< endl;
+    cout<< "Proceso paralelo usando tiles: " << elapsedParallelTiles << " seconds to execute "<< endl<< endl;
 
     optimizationP = elapsedsequential/elapsedParallel;
-    cout<< "The acceleration we've got without using Tiles: " << optimizationP << "X" <<endl;
+    cout<< "Aceleracion sin tiles: " << optimizationP << "X" <<endl;
 
     optimizationT = elapsedsequential/elapsedParallelTiles;
-    cout<< "The acceleration we've got using Tiles: " << optimizationT << "X" <<endl;
+    cout<< "Aceleracion con tiles: " << optimizationT << "X" <<endl;
 
-    cout<< "Comparing Serial vs Parallel result " <<endl;
+    cout<< "comparacion serial Vs Paralelo sin tiles " <<endl;
     compareMatrix(matCS,matCP,n,o);
-    cout<< "Comparing Serial vs Parallel with Tiles result " <<endl;
+    cout<< "Comparacion serial Vs con tiles " <<endl;
     compareMatrix(matCS,matCPT,n,o);
 
     //For debugging porpouses only
